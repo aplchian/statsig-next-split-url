@@ -1,14 +1,10 @@
-module.exports = async () => {
-  return {
-    reactStrictMode: true,
-    trailingSlash: true,
-    env: {
-      SPLIT_URL_TESTS: JSON.stringify(await getUrlSplitTests()),
-    },
-  };
-};
+// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import type { NextApiRequest, NextApiResponse } from "next";
 
-async function getUrlSplitTests() {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   try {
     const fetchRes = await fetch("https://api.statsig.com/v1/get_config", {
       method: "POST",
@@ -24,8 +20,11 @@ async function getUrlSplitTests() {
 
     const resData = await fetchRes.json();
 
+    console.log("resData", resData);
     if (fetchRes.ok) {
-      return resData?.value;
+      // cache response
+      res.setHeader("Cache-Control", "max-age=120, s-maxage=31536000");
+      res.status(200).json(resData?.value);
     } else {
       throw new Error(
         `Statsig failed with (${res.status}): ${
@@ -36,6 +35,6 @@ async function getUrlSplitTests() {
       );
     }
   } catch (e) {
-    throw new Error("statsig split test error fetching");
+    res.status(500);
   }
 }
